@@ -6,9 +6,11 @@ This file creates your application.
 """
 
 from app import app,db
-from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
-from flask import render_template, request, jsonify, send_file
+import datetime
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory, jsonify, send_file
+from flask_wtf.csrf import generate_csrf
 from werkzeug.utils import secure_filename
+from app.forms import MovieForm
 from app.models import Movie
 import os
 
@@ -49,6 +51,10 @@ def send_text_file(file_name):
     file_dot_text = file_name + '.txt'
     return app.send_static_file(file_dot_text)
 
+@app.route('/api/v1/csrf-token', methods=['GET']) 
+def get_csrf(): 
+ return jsonify({'csrf_token': generate_csrf()})
+
 @app.route('/api/v1/movies', methods=['POST'])
 def movies():
     form = MovieForm()
@@ -57,8 +63,9 @@ def movies():
         description = form.description.data
         poster = form.poster.data
         filename = secure_filename(poster.filename)
+        created_at=datetime.datetime.now()
         poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        movie = Movie(title=title, description=description, poster=filename)
+        movie = Movie(title=title, description=description, poster=filename ,created_at=created_at)
         db.session.add(movie)
         db.session.commit()
         return jsonify({
@@ -66,11 +73,11 @@ def movies():
                 "title": title,
                 "poster": filename,
                 "description": description
-        }),200
+        })
     else:
         return jsonify({
-            "errors": form_errors(form)}),400
-        
+            "errors": form_errors(form)})
+
 @app.after_request
 def add_header(response):
     """
