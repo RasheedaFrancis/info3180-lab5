@@ -55,7 +55,12 @@ def send_text_file(file_name):
 def get_csrf(): 
  return jsonify({'csrf_token': generate_csrf()})
 
-@app.route('/api/v1/movies', methods=['POST'])
+@app.route('/api/v1/posters/<filename>')
+def get_image(filename):
+    print(filename)
+    return send_from_directory(os.path.join(os.getcwd(),app.config['UPLOAD_FOLDER']),filename)
+
+@app.route('/api/v1/movies', methods=['GET','POST'])
 def movies():
     form = MovieForm()
     if request.method == 'POST' and form.validate_on_submit():
@@ -74,9 +79,18 @@ def movies():
                 "poster": filename,
                 "description": description
         })
+    elif request.method == "GET":
+            movies = Movie.query.all()
+            movie_list = []
+            for movie in movies:
+                  movie_data = { 'id': movie.id,'title': movie.title,'description': movie.description,'poster': f"/api/v1/posters/{movie.poster}"}
+                  movie_list.append(movie_data)
+            return jsonify({'movies': movie_list})
     else:
         return jsonify({
             "errors": form_errors(form)})
+        
+
 
 @app.after_request
 def add_header(response):
